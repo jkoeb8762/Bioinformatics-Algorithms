@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Gibbs Sampler Visualization
+{% endblock %}
+
+{% block content %}
+<div class="algorithm-container">
+    <h2>Gibbs Sampler Algorithm</h2>
+    <div class="description-container">
+        <p class="description">
+            The Gibbs Sampler is a Markov Chain Monte Carlo algorithm for generating a sequence of samples from the joint probability distribution of two or more random variables.
+            This visualization demonstrates the steps involved in the Gibbs Sampler algorithm.
+        </p>
+    </div>
+    <div>
+        <canvas id="scoreChart" width="400" height="200"></canvas>
+    </div>
+    <button id="start-button" class="restart-button" onclick="startGibbsSampler()">Start Visualization</button>
+    <button id="next-step-button" class="restart-button" onclick="nextStep()" style="display: none;">Next Step</button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+    let currentStep = 0;
+    let steps = [];
+    let scores = [];
+    let Dna = [
+        "CGCCCCTCTCGGGGGTGTTCAGTAACCGGCCA",
+        "GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG",
+        "TAGTACCGAGACCGAAAGAAGTATACAGGCGT",
+        "TAGATCAAGTTTCAGGTGCACGTCGGTGAACC",
+        "AATCCACCAGCTCCACGTGCAATGTTGGCCTA"
+    ];
+    const k = 8;
+    const t = 5;
+    const N = 100;
+    let scoreChart;
+
+    function countPseudocounts(motifs) {
+        const counts = { 'A': [], 'C': [], 'G': [], 'T': [] };
+        const nucleotides = ['A', 'C', 'G', 'T'];
+
+        for (let nucleotide of nucleotides) {
+            for (let i = 0; i < motifs[0].length; i++) {
+                counts[nucleotide].push(1);
+            }
+        }
+
+        for (let j = 0; j < motifs.length; j++) {
+            for (let x = 0; x < motifs[0].length; x++) {
+                let nucleotide = motifs[j][x];
+                counts[nucleotide][x] += 1;
+            }
+        }
+
+        return counts;
+    }
+
+    function profilePseudocounts(motifs) {
+        const t = motifs.length;
+        const profile = {};
+        const counts = countPseudocounts(motifs);
+
+        for (let nucleotide in counts) {
+            profile[nucleotide] = [];
+            for (let count of counts[nucleotide]) {
+                profile[nucleotide].push(count / (t + 4));
+            }
+        }
+
+        return profile;
+    }
+
+    function probability(pattern, profile) {
+        let prob = 1;
+
+        for (let i = 0; i < pattern.length; i++) {
+            prob *= profile[pattern[i]][i];
+        }
+
+        return prob;
+    }
+
+    function profileRandomlyGeneratedKmer(text, k, profile) {
+        const probabilities = [];
+
+        for (let i = 0; i <= text.length - k; i++) {
+            probabilities.push(probability(text.slice(i, i + k), profile));
+        }
+
+        const total = probabilities.reduce((a, b) => a + b, 0);
+        const normalized = probabilities.map(p => p / total);
+
+        let cumulative = 0;
+        const r = Math.random();
+        for (let i = 0; i < normalized.length; i++) {
+            cumulative += normalized[i];
+            if (r < cumulative) {
+                return text.slice(i, i + k);
+            }
+        }
+    }
+
+    function consensus(motifs) {
+        const profile = profilePseudocounts(motifs);
+        let consensus = "";
+        const nucleotides = ['A', 'C', 'G', 'T'];
+
+        for (let i = 0; i < motifs[0].length; i++) {
+            let maxScore = 0;
+            let char = "";
+
+            for (let nucleotide of nucleotides) {
+                if (profile[nucleotide][i] > maxScore) {
+                    maxScore = profile[nucleotide][i];
+                    char = nucleotide;
+                }
+            }
+
+            consensus += char;
+        }
+
+        return consensus;
+    }
+
+    function score(motifs) {
+        let score = 0;
+        const consensusString = consensus(motifs);
+
+        for (let motif of motifs) {
+            for (let i = 0; i < motif.length; i++) {
+                if (motif[i] !== consensusString[i]) {
+                    score += 1;
+                }
+            }
+        }
+
+        return score;
+    }
+
+    function gibbsSamplerStep(Dna, k, t, motifs) {
+        const i = Math.floor(Math.random() * t);
+        const tempMotifs = motifs.filter((_, index) => index !== i);
+        const profile = profilePseudocounts(tempMotifs);
+        const motif_i = profileRandomlyGeneratedKmer(Dna[i], k, profile);
+        motifs[i] = motif_i;
+
+        return motifs;
+    }
+
+    function startGibbsSampler() {
+        currentStep = 0;
+        steps = [];
+        scores = [];
+        let motifs = [];
+
+        for (let string of Dna) {
+            const i = Math.floor(Math.random() * (string.length - k + 1));
+            motifs.push(string.slice(i, i + k));
+        }
+
+        steps.push([...motifs]);
+        scores.push(score(motifs));
+
+        for (let j = 0; j < N; j++) {
+            motifs = gibbsSamplerStep(Dna, k, t, motifs);
+            steps.push([...motifs]);
+            scores.push(score(motifs));
+        }
+
+        updateChart();
+        document.getElementById("start-button").style.display = "none";
+        document.getElementById("next-step-button").style.display = "inline-block";
+        document.getElementById("gibbs-sampler-visualization").textContent = `Step ${currentStep}: \n` + steps[currentStep].join("\n");
+    }
+
+    function nextStep() {
+        currentStep++;
+        if (currentStep < steps.length) {
+            document.getElementById("gibbs-sampler-visualization").textContent = `Step ${currentStep}: \n` + steps[currentStep].join("\n");
+            updateChart();
+        } else {
+            document.getElementById("next-step-button").style.display = "none";
+            document.getElementById("start-button").style.display = "inline-block";
+        }
+    }
+
+    function updateChart() {
+        if (scoreChart) {
+            scoreChart.destroy();
+        }
+
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        scoreChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: scores.length }, (_, i) => i),
+                datasets: [{
+                    label: 'Score',
+                    data: scores,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Iteration'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Score'
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

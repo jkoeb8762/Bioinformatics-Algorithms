@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}De Bruijn Graph Visualization{% endblock %}
+
+{% block content %}
+<div class="algorithm-container">
+    <h2>De Bruijn Graph</h2>
+    <p>Text: <span id="text-value"></span></p>
+    <p>k: <span id="k-value"></span></p>
+    <div id="graph-container"></div>
+    <button class="restart-button" onclick="restartVisualization()">Restart</button>
+</div>
+<div class="description-container">
+    <h2>Algorithm Description</h2>
+    <p class="description">
+        The De Bruijn Graph algorithm constructs a graph where each node represents a k-1 mer, and each directed edge represents a k-mer in the input text. This graph is particularly useful in genome assembly as it helps in representing overlaps between k-mers.
+    </p>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script>
+    function DeBruijnGraph(k, text) {
+        let graphMap = {};
+        for (let i = 0; i <= text.length - k; i++) {
+            let kmer = text.substring(i, i + k);
+            let prefix = kmer.substring(0, k - 1);
+            let suffix = kmer.substring(1);
+
+            if (!graphMap[prefix]) {
+                graphMap[prefix] = [];
+            }
+            graphMap[prefix].push(suffix);
+        }
+        return graphMap;
+    }
+
+    function createGraphVisualization(graphMap, text, k) {
+        const graphContainer = document.getElementById("graph-container");
+        graphContainer.innerHTML = ''; // Clear previous graph
+
+        const textValue = document.getElementById("text-value");
+        const kValue = document.getElementById("k-value");
+        textValue.textContent = text;
+        kValue.textContent = k;
+
+        const width = 1000;
+        const height = 600;
+
+        const svg = d3.select("#graph-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const nodes = [];
+        const links = [];
+
+        Object.keys(graphMap).forEach(key => {
+            nodes.push({ id: key });
+            graphMap[key].forEach(suffix => {
+                links.push({ source: key, target: suffix });
+                if (!nodes.find(node => node.id === suffix)) {
+                    nodes.push({ id: suffix });
+                }
+            });
+        });
+
+        // Create arrow markers
+        svg.append("defs").selectAll("marker")
+            .data(["end"])
+            .enter().append("marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 15)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#999");
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .stop(); // Stop the simulation to make it static
+
+        // Manually set positions for a left-to-right layout
+        nodes.forEach((node, i) => {
+            node.x = (i + 1) * (width / (nodes.length + 1));
+            node.y = height / 2;
+        });
+
+        const link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .attr("stroke-width", 1.5)
+            .attr("stroke", "#999")
+            .attr("marker-end", "url(#arrow)");
+
+        const node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("r", 10)
+            .attr("fill", "#69b3a2");
+
+        const label = svg.append("g")
+            .attr("class", "labels")
+            .selectAll("text")
+            .data(nodes)
+            .enter().append("text")
+            .attr("dy", -15)
+            .attr("text-anchor", "middle")
+            .text(d => d.id);
+
+        // Set positions for links and nodes
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y);
+
+        label
+            .attr("x", d => d.x)
+            .attr("y", d => d.y);
+    }
+
+    function restartVisualization() {
+        const k = 4;
+        const text = "AAGATTCTCTAAGA";
+        const graphMap = DeBruijnGraph(k, text);
+        createGraphVisualization(graphMap, text, k);
+    }
+
+    window.onload = function() {
+        applyNightMode();
+        restartVisualization();
+    }
+</script>
+{% endblock %}

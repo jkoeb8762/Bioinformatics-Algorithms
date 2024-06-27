@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Pattern Count Visualization{% endblock %}
+
+{% block extra_js %}
+<script>
+    function restartAnimation() {
+        document.getElementById('count-text1').innerHTML = ''; // Clear the previous result text
+        document.querySelector('.restart-button').disabled = true; // Disable the button at the start of animation
+        const text1 = 'CTCTTATTACTCTTATTGGTCTTATTCTCTTATTTCTTATTATCTTATTCTATCCTCTTATTTGGTCTTATTAGACAATCTTATTGGTCTTATTTTCTTATTTCTTATTCACCTCTTATTGTCTTATTTCTTATTTCTTATTCGCACACCGTTCTTATTTCTTATTTCTTATTCTTCTTATTGTCTTATTTCTTATTTCTTATTATGGTATTCTTATTGTCTTATTTCTTATTGTCTTATTAGTCTTATTTGGATACTCTTATTTCTTATTTTGAGACTCTTATTTATCCCGTTTCTTATTGATATCTTATTTCTTATTTTCTTATTGATATCTTATTTCTGTTCTTATTTCTTATTCTGGCTCTTATTTCTTATTGTTCTTATTAATTCTTATTTCTTATTACTCTTATTGACGATCTTATTTTCTTATTCCTCTTATTTCTTATTGTCTTATTAGCGTCTTATTCATCTTATTGATACTCTTATTTCTTATTTCTTATTTCTTATTCGAAACATCTTATTTGGTCTTATTCTCTTATTTCAGCTCTTATTAGATCTTATTCCTGCTCTTATTCACATCTTATTGCCACTATCTTATTCCCCGATGCCTCTTATTTCACGGATCTTATTATCTTATTATCTTATTGTCATCTTATTTCTTATTGTCTTATTTCTTATTAATTCTTATTTTCTTATTTCTCTTATTCTTCTTATTCCTCTTATTTGATCTTATTTCTTATTCGATTCTTATTATCTTATTGTCTTATTGCTCTTATTTCTTATTTCTTATTATCTATCGCTCTTATTTTCTTATTTACGATGTATTCTTATTTACGGATCTTATTCCAGCACTGTGCCCTCTTATTCTGTCTTATTCTGTCTTATTGCAGTCTTATTCGCATATGACTCTTATTACGGCTCTTATTTCTTATTCTCTTATTCATCTTATT';
+        const pattern1 = 'TCTTATTTC';
+        animatePatternCount('text1', text1, pattern1);
+    }
+
+    function animatePatternCount(containerId, text, pattern) {
+        let currentIndex = 0;
+        const patternLength = pattern.length;
+        let matchCount = 0;
+        const textContainer = document.getElementById(containerId);
+        textContainer.innerHTML = '';
+
+        // Create spans for each character
+        for (let i = 0; i < text.length; i++) {
+            const span = document.createElement('span');
+            span.textContent = text[i];
+            textContainer.appendChild(span);
+        }
+
+        const interval = setInterval(() => {
+            if (currentIndex <= text.length - patternLength) {
+                const currentPattern = text.substring(currentIndex, currentIndex + patternLength);
+
+                // Clear all previous current highlights
+                document.querySelectorAll(`#${containerId} span`).forEach(span => {
+                    span.classList.remove('current');
+                });
+
+                // Highlight current pattern
+                for (let i = 0; i < patternLength; i++) {
+                    document.querySelectorAll(`#${containerId} span`)[currentIndex + i].classList.add('current');
+                }
+
+                // Highlight matches
+                if (currentPattern === pattern) {
+                    matchCount++;
+                    for (let i = 0; i < patternLength; i++) {
+                        document.querySelectorAll(`#${containerId} span`)[currentIndex + i].classList.add('highlight');
+                    }
+                }
+
+                currentIndex++;
+            } else {
+                clearInterval(interval);
+                document.getElementById(`count-${containerId}`).innerHTML = `Pattern '${pattern}' found ${matchCount} times.`;
+                document.querySelector('.restart-button').disabled = false; // Enable the button after animation
+            }
+        }, 15); // Adjust the speed of the animation by changing the interval time
+    }
+
+    window.onload = function() {
+        applyNightMode();
+        restartAnimation();
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="algorithm-container">
+    <h2>Pattern Count Algorithm</h2>
+    <div id="text1" class="text-container"></div>
+    <div id="count-text1" class="count"></div>
+    <button class="restart-button" onclick="restartAnimation()">Restart</button>
+</div>
+<div class="description-container">
+    <h2>Algorithm Description</h2>
+    <p class="description">
+        The "Pattern Count" algorithm identifies the number of times a specific pattern appears within a given text. This is a basic but fundamental operation in bioinformatics for tasks such as motif finding in DNA sequences. The algorithm works by sliding a window of the pattern's length across the text and counting the number of times the pattern matches the substring in the current window position. The result is the total count of the pattern's occurrences in the text.
+    </p>
+</div>
+{% endblock %}

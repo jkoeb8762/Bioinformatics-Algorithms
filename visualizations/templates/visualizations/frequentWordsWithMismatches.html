@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Frequent Words with Mismatches Visualization{% endblock %}
+
+{% block extra_js %}
+<script>
+    function HammingDistance(x, y) {
+        let dist = 0;
+        for (let i = 0; i < x.length; i++) {
+            if (x[i] !== y[i]) {
+                dist += 1;
+            }
+        }
+        return dist;
+    }
+
+    function Neighbors(pattern, d) {
+        if (d === 0) {
+            return new Set([pattern]);
+        }
+        if (pattern.length === 1) {
+            return new Set(["A", "C", "G", "T"]);
+        }
+        let neighborhood = new Set();
+        let suffix = pattern.substring(1);
+        let suffixNeighbors = Neighbors(suffix, d);
+        let nucleotides = ["A", "T", "G", "C"];
+        suffixNeighbors.forEach(text => {
+            if (HammingDistance(suffix, text) < d) {
+                nucleotides.forEach(nucleotide => {
+                    neighborhood.add(nucleotide + text);
+                });
+            } else {
+                neighborhood.add(pattern[0] + text);
+            }
+        });
+        return neighborhood;
+    }
+
+    function findPatternPositions(text, patterns, k, d) {
+        const positions = [];
+        for (let i = 0; i <= text.length - k; i++) {
+            let segment = text.substring(i, i + k);
+            patterns.forEach(pattern => {
+                if (HammingDistance(segment, pattern) <= d) {
+                    positions.push({start: i, end: i + k});
+                }
+            });
+        }
+        return positions;
+    }
+
+    function updateFreqMapDisplay(freqMap, containerId) {
+        const freqMapContainer = document.getElementById(containerId);
+        freqMapContainer.innerHTML = '';
+
+        const sortedEntries = Array.from(freqMap.entries()).sort((a, b) => {
+            if (b[1] === a[1]) {
+                return a[0].localeCompare(b[0]);
+            }
+            return b[1] - a[1];
+        });
+
+        const columns = 4;
+        const rows = Math.ceil(sortedEntries.length / columns);
+        const columnContent = Array.from({ length: columns }, () => []);
+
+        sortedEntries.forEach(([key, value], index) => {
+            const columnIndex = index % columns;
+            columnContent[columnIndex].push(`${key}: ${value}`);
+        });
+
+        const columnContainer = document.createElement('div');
+        columnContainer.style.display = 'flex';
+        columnContainer.style.flexDirection = 'row';
+        columnContainer.style.flexWrap = 'wrap';
+        columnContainer.style.width = '100%';
+
+        columnContent.forEach(content => {
+            const columnDiv = document.createElement('div');
+            columnDiv.className = 'freqmap-column';
+            columnDiv.style.flex = '1';
+            columnDiv.style.minWidth = '25%';
+            columnDiv.style.padding = '10px';
+            columnDiv.style.boxSizing = 'border-box';
+            columnDiv.innerHTML = content.join('<br>');
+            columnContainer.appendChild(columnDiv);
+        });
+
+        freqMapContainer.appendChild(columnContainer);
+    }
+
+    function animateFrequentWordsWithMismatches(containerId, text, k, d, freqMapContainerId) {
+        let currentIndex = 0;
+        let frequencyMap = new Map();
+        const textContainer = document.getElementById(containerId);
+        textContainer.innerHTML = '';
+
+        for (let i = 0; i < text.length; i++) {
+            const span = document.createElement('span');
+            span.textContent = text[i];
+            textContainer.appendChild(span);
+        }
+
+        const interval = setInterval(() => {
+            if (currentIndex <= text.length - k) {
+                let pattern = text.substring(currentIndex, currentIndex + k);
+                let neighborhood = Neighbors(pattern, d);
+
+                neighborhood.forEach(neighbor => {
+                    if (!frequencyMap.has(neighbor)) {
+                        frequencyMap.set(neighbor, 0);
+                    }
+                    frequencyMap.set(neighbor, frequencyMap.get(neighbor) + 1);
+                });
+
+                updateFreqMapDisplay(frequencyMap, freqMapContainerId);
+
+                document.querySelectorAll(`#${containerId} span`).forEach(span => {
+                    span.classList.remove('highlight');
+                    span.classList.remove('current');
+                });
+
+                for (let i = 0; i < k; i++) {
+                    document.querySelectorAll(`#${containerId} span`)[currentIndex + i].classList.add('current');
+                }
+
+                currentIndex++;
+            } else {
+                clearInterval(interval);
+
+                let maxFrequency = Math.max(...frequencyMap.values());
+
+                let mostFrequentPatterns = [];
+                frequencyMap.forEach((value, key) => {
+                    if (value === maxFrequency) {
+                        mostFrequentPatterns.push(key);
+                    }
+                });
+
+                const positions = findPatternPositions(text, mostFrequentPatterns, k, d);
+
+                document.querySelectorAll(`#${containerId} span`).forEach(span => {
+                    span.classList.remove('highlight');
+                });
+
+                positions.forEach(position => {
+                    for (let j = position.start; j < position.end; j++) {
+                        document.querySelectorAll(`#${containerId} span`)[j].classList.add('highlight');
+                    }
+                });
+
+                document.getElementById(`count-${containerId}`).innerHTML = `Most frequent patterns with mismatches: ${mostFrequentPatterns.join(', ')}`;
+                document.querySelector('.restart-button').disabled = false;
+            }
+        }, 5);
+    }
+
+    function restartAnimation() {
+        document.getElementById('count-text1').innerHTML = '';
+        document.querySelector('.restart-button').disabled = true;
+        const text1 = 'CAAAAGACGATAAGCTCCGGCAAGCACCATTGATCAACGCAAGGATCGGTGATGTTAACAAAGATTCGGCACATTACTCTTGTTGGTGTGGTATCGCTTAACTGCGCGGCGGAGCCTTATGGCAAAACCGTTCGGGAATGATTCCGGTAGCGCTAAAGGTCCATAGCACGTACATCGCAACCTGGCGTGCGTTCAATTTG';
+        const k1 = 5;
+        const d1 = 1;
+        animateFrequentWordsWithMismatches('text1', text1, k1, d1, 'freqmap1');
+    }
+
+    window.onload = function() {
+        applyNightMode();
+        restartAnimation();
+    }
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .algorithm-container {
+        max-width: 90%; 
+        margin: 20px auto; 
+        padding: 20px;
+        border-radius: 10px;
+        background-color: #f2f2f2;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        min-height: 500px; 
+    }
+    .freqmap-container {
+        display: flex;
+        flex-wrap: wrap;
+        white-space: pre;
+        font-family: monospace;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-top: 20px;
+        max-height: 400px; 
+        overflow-y: auto; 
+    }
+    .freqmap-column {
+        flex: 1;
+        min-width: 25%; 
+        padding: 10px; 
+        box-sizing: border-box; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="algorithm-container">
+    <h2>Frequent Words with Mismatches: 5-mer with 1 mismatch allowed</h2>
+    <div id="text1" class="text-container"></div>
+    <div id="freqmap1" class="freqmap-container"></div>
+    <div id="count-text1" class="count"></div>
+    <button class="restart-button" onclick="restartAnimation()">Restart</button>
+</div>
+<div class="description-container">
+    <h2>Algorithm Description</h2>
+    <p class="description">
+        The "Frequent Words with Mismatches" algorithm identifies the most frequent k-mers (substrings of length k) within a given text, allowing for a specified number of mismatches (differences between characters). This is particularly useful in bioinformatics for finding motifs in DNA sequences that are not exactly identical but share a common pattern. The algorithm works by generating all possible k-mers with up to d mismatches for each k-mer in the text, then counting the occurrences of these k-mers. The k-mers with the highest frequencies are then identified as the most frequent patterns with mismatches.
+    </p>
+</div>
+{% endblock %}

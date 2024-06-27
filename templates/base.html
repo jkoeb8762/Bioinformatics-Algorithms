@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Bioinformatics Algorithms{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body.night-mode {
+            background-color: #333;
+            color: #ccc;
+        }
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+        }
+        .sidebar a {
+            padding: 8px 8px 8px 32px;
+            text-decoration: none;
+            font-size: 25px;
+            color: #818181;
+            display: block;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            color: #f1f1f1;
+        }
+        .sidebar.night-mode {
+            background-color: #444;
+        }
+        .sidebar.night-mode a {
+            color: #ccc;
+        }
+        .sidebar.night-mode a:hover {
+            color: #fff;
+        }
+        .openbtn {
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #111;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+        }
+        .openbtn:hover {
+            background-color: #444;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .algorithm-container, .description-container {
+            max-width: 80%;
+            margin: 10px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f2f2f2;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .algorithm-container.night-mode, .description-container.night-mode {
+            background-color: #444;
+            color: #ccc;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+        .current {
+            background-color: red;
+        }
+        .text-container {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-top: 20px;
+        }
+        h2 {
+            font-size: 18px;
+            text-align: center;
+        }
+        .description {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .count {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        .restart-button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+        }
+        .night-mode .restart-button {
+            background-color: #888;
+            color: black;
+        }
+        .night-mode .restart-button:hover {
+            background-color: #555;
+        }
+        .night-mode .openbtn {
+            background-color: #444;
+        }
+        .night-mode .openbtn:hover {
+            background-color: #222;
+        }
+    </style>
+    <script>
+        function openNav() {
+            document.getElementById("mySidebar").style.width = "250px";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidebar").style.width = "0";
+        }
+
+        function toggleNightMode() {
+            const body = document.body;
+            const sidebar = document.getElementById("mySidebar");
+            const containers = document.querySelectorAll(".algorithm-container, .description-container");
+            body.classList.toggle("night-mode");
+            sidebar.classList.toggle("night-mode");
+            containers.forEach(container => container.classList.toggle("night-mode"));
+
+            if (body.classList.contains("night-mode")) {
+                localStorage.setItem("nightMode", "enabled");
+            } else {
+                localStorage.setItem("nightMode", "disabled");
+            }
+        }
+
+        function applyNightMode() {
+            const nightMode = localStorage.getItem("nightMode");
+            if (nightMode === "enabled") {
+                const body = document.body;
+                const sidebar = document.getElementById("mySidebar");
+                const containers = document.querySelectorAll(".algorithm-container, .description-container");
+                body.classList.add("night-mode");
+                sidebar.classList.add("night-mode");
+                containers.forEach(container => container.classList.add("night-mode"));
+            }
+        }
+
+        window.onload = function() {
+            applyNightMode();
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</head>
+<body>
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <a href="{% url 'home_view' %}">Home</a>
+        <a href="{% url 'pattern_count_view' %}">Pattern Count</a>
+        <a href="{% url 'frequent_words_with_mismatches_view' %}">Frequent Words with Mismatches</a>
+        <a href="{% url 'gibbs_sampler_view' %}">Gibbs Sampler</a>
+        <a href="{% url 'de_bruijn_graph_view' %}">DeBruijn Graph</a>
+        <!-- Add more links for other algorithms -->
+    </div>
+
+    <div>
+        <button class="openbtn" onclick="openNav()">&#9776; Menu</button>
+        <button class="openbtn" onclick="toggleNightMode()">Night Mode</button>
+    </div>
+
+    <h1>Bioinformatics Algorithm Visualizations</h1>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
