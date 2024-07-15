@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'BioinformaticsAlgorithms.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Bioinf',
+        'NAME': 'bioinf',
         'USER': 'jkoeb8762',
         'PASSWORD': '880602',
         'HOST': 'localhost',
