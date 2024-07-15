@@ -92,6 +92,7 @@ DATABASES = {
     }
 }
 ALLOWED_HOSTS = ['tpexray.xyz', 'www.tpexray.xyz', '165.232.156.110']
+CSRF_TRUSTED_ORIGINS = ['http://tpexray.xyz', 'http://www.tpexray.xyz']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
