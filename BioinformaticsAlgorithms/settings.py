@@ -26,9 +26,8 @@ SECRET_KEY = 'django-insecure-eq%amvj*o_epuo1glvpfk=*tpwu(0@+v&2g2g9bu-)7-e8xd_y
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
-
+ALLOWED_HOSTS = ['tpexray.xyz', 'www.tpexray.xyz', '165.232.156.110']
+CSRF_TRUSTED_ORIGINS = ['http://tpexray.xyz', 'http://www.tpexray.xyz']
 # Application definition
 
 INSTALLED_APPS = [
@@ -91,8 +90,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-ALLOWED_HOSTS = ['tpexray.xyz', 'www.tpexray.xyz', '165.232.156.110']
-CSRF_TRUSTED_ORIGINS = ['http://tpexray.xyz', 'http://www.tpexray.xyz']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
