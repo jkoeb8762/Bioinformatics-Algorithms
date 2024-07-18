@@ -4,27 +4,11 @@
 Gibbs Sampler Visualization
 {% endblock %}
 
-{% block content %}
-<div class="algorithm-container">
-    <h2>Gibbs Sampler Algorithm</h2>
-    <div class="description-container">
-        <p class="description">
-            The Gibbs Sampler is a Markov Chain Monte Carlo algorithm for generating a sequence of samples from the joint probability distribution of two or more random variables.
-            This visualization demonstrates the steps involved in the Gibbs Sampler algorithm.
-        </p>
-    </div>
-    <div>
-        <canvas id="scoreChart" width="400" height="200"></canvas>
-    </div>
-    <button id="start-button" class="restart-button" onclick="startGibbsSampler()">Start Visualization</button>
-    <button id="next-step-button" class="restart-button" onclick="nextStep()" style="display: none;">Next Step</button>
-</div>
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-
-    let currentStep = 0;
-    let steps = [];
-    let scores = [];
+    let runningAverages = [];
+    let allScores = [];
     let Dna = [
         "CGCCCCTCTCGGGGGTGTTCAGTAACCGGCCA",
         "GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG",
@@ -36,6 +20,7 @@ Gibbs Sampler Visualization
     const t = 5;
     const N = 100;
     let scoreChart;
+    let avgScoreChart;
 
     function countPseudocounts(motifs) {
         const counts = { 'A': [], 'C': [], 'G': [], 'T': [] };
@@ -139,68 +124,92 @@ Gibbs Sampler Visualization
         return score;
     }
 
-    function gibbsSamplerStep(Dna, k, t, motifs) {
-        const i = Math.floor(Math.random() * t);
-        const tempMotifs = motifs.filter((_, index) => index !== i);
-        const profile = profilePseudocounts(tempMotifs);
-        const motif_i = profileRandomlyGeneratedKmer(Dna[i], k, profile);
-        motifs[i] = motif_i;
-
-        return motifs;
-    }
-
-    function startGibbsSampler() {
-        currentStep = 0;
-        steps = [];
-        scores = [];
+    function gibbsSampler(Dna, k, t, N) {
         let motifs = [];
-
         for (let string of Dna) {
             const i = Math.floor(Math.random() * (string.length - k + 1));
             motifs.push(string.slice(i, i + k));
         }
-
-        steps.push([...motifs]);
-        scores.push(score(motifs));
+        let bestMotifs = motifs.slice();
+        let bestScore = score(bestMotifs);
+        let iterationScores = [];
 
         for (let j = 0; j < N; j++) {
-            motifs = gibbsSamplerStep(Dna, k, t, motifs);
-            steps.push([...motifs]);
-            scores.push(score(motifs));
+            const i = Math.floor(Math.random() * t);
+            const tempMotifs = motifs.filter((_, index) => index !== i);
+            const profile = profilePseudocounts(tempMotifs);
+            const motif_i = profileRandomlyGeneratedKmer(Dna[i], k, profile);
+            motifs[i] = motif_i;
+            let currentScore = score(motifs);
+            iterationScores.push(currentScore);
+            if (currentScore < bestScore) {
+                bestMotifs = motifs.slice();
+                bestScore = currentScore;
+            }
         }
-
-        updateChart();
-        document.getElementById("start-button").style.display = "none";
-        document.getElementById("next-step-button").style.display = "inline-block";
-        document.getElementById("gibbs-sampler-visualization").textContent = `Step ${currentStep}: \n` + steps[currentStep].join("\n");
+        return { bestMotifs, iterationScores, bestScore };
     }
 
-    function nextStep() {
-        currentStep++;
-        if (currentStep < steps.length) {
-            document.getElementById("gibbs-sampler-visualization").textContent = `Step ${currentStep}: \n` + steps[currentStep].join("\n");
-            updateChart();
-        } else {
-            document.getElementById("next-step-button").style.display = "none";
-            document.getElementById("start-button").style.display = "inline-block";
+    function loop(Dna, k, t, N) {
+        let bestScore = Infinity;
+        let bestMotifs = [];
+        allScores = [];
+        for (let i = 0; i < 100; i++) {
+            let { bestMotifs: motifs, iterationScores: scores, bestScore: currentBestScore } = gibbsSampler(Dna, k, t, N);
+            allScores = allScores.concat(scores);
+            if (currentBestScore < bestScore) {
+                bestScore = currentBestScore;
+                bestMotifs = motifs;
+            }
         }
+        return { bestMotifs, allScores, bestScore };
     }
 
-    function updateChart() {
+    function startGibbsSampler() {
+        const result = loop(Dna, k, t, N);
+        runningAverages = calculateRunningAverage(result.allScores);
+
+        updateCharts(result.allScores, runningAverages, result.bestScore);
+        document.getElementById("gibbs-sampler-visualization").textContent = `Best Motifs: \n${result.bestMotifs.join("\n")}\n\nBest Score: ${result.bestScore}`;
+    }
+
+    function calculateRunningAverage(scores) {
+        let total = 0;
+        let runningAverage = [];
+        for (let i = 0; i < scores.length; i++) {
+            total += scores[i];
+            runningAverage.push(total / (i + 1));
+        }
+        return runningAverage;
+    }
+
+    function updateCharts(scores, runningAverages, bestScore) {
         if (scoreChart) {
             scoreChart.destroy();
         }
+        if (avgScoreChart) {
+            avgScoreChart.destroy();
+        }
 
-        const ctx = document.getElementById('scoreChart').getContext('2d');
-        scoreChart = new Chart(ctx, {
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        const avgScoreCtx = document.getElementById('avgScoreChart').getContext('2d');
+
+        scoreChart = new Chart(scoreCtx, {
             type: 'line',
             data: {
                 labels: Array.from({ length: scores.length }, (_, i) => i),
                 datasets: [{
-                    label: 'Score',
+                    label: 'Iteration Scores',
                     data: scores,
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 2,
+                    fill: false
+                }, {
+                    label: 'Best Score',
+                    data: new Array(scores.length).fill(bestScore),
+                    borderColor: 'rgba(192, 75, 75, 1)',
+                    borderWidth: 2,
+                    borderDash: [10, 5],
                     fill: false
                 }]
             },
@@ -224,6 +233,68 @@ Gibbs Sampler Visualization
                 }
             }
         });
+
+        avgScoreChart = new Chart(avgScoreCtx, {
+            type: 'line',
+            data: {
+                labels: Array.from({ length: runningAverages.length }, (_, i) => i),
+                datasets: [{
+                    label: 'Running Average Score',
+                    data: runningAverages,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Iteration'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Running Average Score'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    window.onload = function() {
+        applyNightMode();
+        startGibbsSampler();
     }
 </script>
+{% endblock %}
+
+{% block content %}
+<div class="algorithm-container">
+    <h2>Gibbs Sampler Algorithm</h2>
+    <p class="description"> Sample Input  </p>
+    <p class="description">Dna = "CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA", "GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG", "TAGTACCGAGACCGAAAGAAGTATACAGGCGT", "TAGATCAAGTTTCAGGTGCACGTCGGTGAACC", "AATCCACCAGCTCCACGTGCAATGTTGGCCTA"</p> 
+    <p class="description">k = 8, t = 5, N = 100</p>
+    <p class="description">Sample Output</p>
+    <div id="gibbs-sampler-visualization"></div>
+    <div>
+        <canvas id="scoreChart" width="800" height="400"></canvas>
+    </div>
+    <div>
+        <canvas id="avgScoreChart" width="800" height="400"></canvas>
+    </div>
+</div>
+<div class="description-container">
+    <h2>Algorithm Description</h2>
+    <p class="description">
+        The Gibbs Sampler is a Markov Chain Monte Carlo algorithm for generating a sequence of samples from the joint probability distribution of two or more random variables.
+        This visualization demonstrates the steps involved in the Gibbs Sampler algorithm and shows how it may converge to different solutions when run multiple times from different random starting points.
+    </p>
+</div>
 {% endblock %}
