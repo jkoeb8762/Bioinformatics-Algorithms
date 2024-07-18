@@ -146,6 +146,8 @@
         <a href="{% url 'home_view' %}">Home</a>
         <a href="{% url 'pattern_count_view' %}">Pattern Count</a>
         <a href="{% url 'frequent_words_with_mismatches_view' %}">Frequent Words with Mismatches</a>
+        <a href="{% url 'gibbs_sampler_view' %}">Gibbs Sampler</a>
+        <a href="{% url 'de_bruijn_graph_view' %}">DeBruijn Graph</a>
         <!-- Add more links for other algorithms -->
     </div>
 
@@ -165,6 +167,16 @@
             <a href="{% url 'frequent_words_with_mismatches_view' %}" class="link">
                 <div class="grid-item">
                     <h2>Frequent Words with Mismatches</h2>
+                </div>
+            </a>
+            <a href="{% url 'gibbs_sampler_view' %}" class="link">
+                <div class="grid-item">
+                    <h2>Gibbs Sampler</h2>
+                </div>
+            </a>
+            <a href="{% url 'de_bruijn_graph_view' %}" class="link">
+                <div class="grid-item">
+                    <h2>DeBruijn Graph</h2>
                 </div>
             </a>
             <!-- Add more grid items here for other algorithms -->
