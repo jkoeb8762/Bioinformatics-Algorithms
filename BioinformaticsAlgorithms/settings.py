@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
-
+from .secrets import SECRET_KEY
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,11 +20,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-eq%amvj*o_epuo1glvpfk=*tpwu(0@+v&2g2g9bu-)7-e8xd_y'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['tpexray.xyz', 'www.tpexray.xyz', '165.232.156.110' ]
 #'127.0.0.1'
 CSRF_TRUSTED_ORIGINS = ['http://tpexray.xyz', 'http://www.tpexray.xyz']
